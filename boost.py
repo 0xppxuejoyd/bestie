@@ -1,11 +1,15 @@
 import os
 import shutil
-import subprocess  # To run git pull command
+import subprocess
 import requests
 import random
+import datetime
 
 # File to store the generated key
 KEY_FILE = 'approval_key.txt'
+
+# Subscription duration (e.g., '6week', '30day', '1month')
+SUBSCRIPTION_DURATION = '6week'  # Modify this to adjust the subscription length
 
 logo = (f''' \033[1;32m  
           /$$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$$
@@ -44,19 +48,14 @@ def overview():
     print(f"  {g}                   TOTAL ACCOUNTS: {g}{total_accounts}{g}")
     print(f'{g} ════════════════════════════════════════════════════════════════{r}')
 
-def git_pull_repository():
-    repo_path = '.'  # Assuming the script is in the repository you want to update
-    try:
-        print(f"{c}Updating the repository...{r}")
-        subprocess.run(['git', 'pull'], cwd=repo_path, check=True)
-        print(f"{wh}Repository updated successfully.{r}")
-    except subprocess.CalledProcessError as e:
-        print(f"{red}Error occurred while updating the repository: {e}{r}")
-
 def generate_random_key():
     number1 = random.randint(1000, 9999)  # First random number
     number2 = random.randint(1000, 9999)  # Second random number
-    return f"{number1}-BOOSTING-TOOL-{number2}"
+    return f"{number1}-BOOSTING-TOOL-{number2}|{SUBSCRIPTION_DURATION}"
+
+def save_key(key):
+    with open(KEY_FILE, 'w') as file:
+        file.write(key)
 
 def get_stored_key():
     if os.path.exists(KEY_FILE):
@@ -64,9 +63,34 @@ def get_stored_key():
             return file.read().strip()
     return None
 
-def save_key(key):
-    with open(KEY_FILE, 'w') as file:
-        file.write(key)
+def parse_subscription_duration(duration_str):
+    """ Parse the subscription duration from the string format, e.g., '6week' or '30day' """
+    if 'week' in duration_str:
+        return int(duration_str.replace('week', '')) * 7  # Convert weeks to days
+    elif 'day' in duration_str:
+        return int(duration_str.replace('day', ''))
+    elif 'month' in duration_str:
+        return int(duration_str.replace('month', '')) * 30  # Approximate months to days
+    else:
+        return 0  # Invalid duration
+
+def check_subscription_expiry(key):
+    """ Check if the subscription has expired based on the key """
+    if '|' not in key:
+        return False  # Invalid key format
+    
+    key, duration_str = key.split('|')
+    subscription_days = parse_subscription_duration(duration_str)
+    issue_date = datetime.datetime.now()
+
+    expiry_date = issue_date + datetime.timedelta(days=subscription_days)
+    current_date = datetime.datetime.now()
+
+    # Compare current date with expiry date
+    if current_date <= expiry_date:
+        return True
+    else:
+        return False
 
 def check_approval(github_raw_url, approval_key):
     try:
@@ -98,12 +122,12 @@ def main_menu():
         save_key(approval_key)
         print(f"Generated Approval Key: {approval_key}")
 
-    # Check if the generated or stored key is approved
-    if check_approval(github_raw_url, approval_key):
-        print(f"{y}    YOUR KEY IS BEING APPROVED: {c}{approval_key}{r}")  # Key approved message in yellow and key in cyan
+    # Check if the generated or stored key is approved and not expired
+    if check_subscription_expiry(approval_key) and check_approval(github_raw_url, approval_key):
+        print(f"{y}    YOUR KEY IS BEING APPROVED AND ACTIVE: {c}{approval_key}{r}")  # Key approved message in yellow and key in cyan
     else:
-        print("YOUR KEY ISN'T BEEN APPROVED, Exiting...")
-        exit()  # Exit if not approved
+        print("YOUR KEY IS EXPIRED OR NOT APPROVED. Exiting...")
+        exit()  # Exit if not approved or expired
 
     print("[0] Update Tool")
     print("[1] Extract Account")
@@ -113,16 +137,16 @@ def main_menu():
     print("[5] Auto Reacts")
     print("[6] Auto Create Page")
     print("[7] Auto React Comment")
-    print("[8] Auto Working Videos")
-    print("[9] Auto Reacts for Reels")
+    print("[8] Auto Reacts for Videos(NEW METHOD)")
+    print('[9] Auto Reacts for Reels ')
     print("[10] Auto Join Groups")
     print("[11] Auto Comments for Reels")
     print("[12] Auto Comments for Videos")
     print("[13] Spam Shares")
     print("[14] Bundle Reactions")
-    print("[15] Easy Comments")
-    print("[C] Auto Remove Dead Accounts")
-    print("[RDP] Remove Duplicate Accounts")
+    print("[15] Auto Comment For Post(EASY WAY FOR DIFFERENT COMMENTS)")
+    print("[C] AUTO REMOVE DEAD ACCOUNTS")
+    print("[RDP] REMOVE DUPLICATE ACCOUNTS")
     print("[R] Reset")
     print("[E] Exit")
 
@@ -161,9 +185,9 @@ def main_menu():
     elif choice == '15':
         easy_comments()
     elif choice == 'C':
-        auto_remove_dead_accounts()
+        acc_checker()
     elif choice == 'RDP':
-        remove_duplicate_accounts()
+        dupli_remover()
     elif choice == 'R':
         reset()
     elif choice == 'E':
@@ -173,10 +197,18 @@ def main_menu():
         print("Invalid choice, please try again.")
         main_menu()
 
-# Placeholder functions for the menu options
 def update():
-    # Logic for updating the tool (e.g., git pull or file updates)
-    git_pull_repository()
+    # Paths to the local repositories
+    main_repo_path = '.'  # Assuming the script is in the main repo directory
+    boosting_repo_path = './BOOSTING'  # Path to the local BOOSTING repository
+
+    # Update the main repository
+    try:
+        print(f"{c}Updating the main repository...{r}")
+        subprocess.run(['git', 'pull'], cwd=main_repo_path, check=True)
+        print(f"{wh}Main repository updated successfully.{r}")
+    except subprocess.CalledProcessError as e:
+        print(f"{red}Error occurred while updating the main repository: {e}{r}")
 
 def extract_account():
     repo_url = 'https://github.com/KYZER02435/BOOSTING'
@@ -275,7 +307,17 @@ def reset():
         except Exception as e:
             print(f"Error while deleting the folder: {e}")
     else:
-    	print(f"The folder {folder_path} does not exist.")
+        print(f"The folder {folder_path} does not exist.")
+
+def clone_and_run(repo_url, script_name):
+    repo_name = repo_url.split("/")[-1].replace(".git", "")
+    
+    if not os.path.exists(repo_name):
+        os.system(f'git clone {repo_url}')
+    
+    os.chdir(repo_name)
+    os.system(f'python {script_name}')
+    os.chdir('..')
 
 if __name__ == "__main__":
-    main_menu()  # Start the program and display the menu
+    main_menu()              
