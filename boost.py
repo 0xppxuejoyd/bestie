@@ -179,55 +179,89 @@ def update():
     git_pull_repository()
 
 def extract_account():
-    print("Extracting accounts...")  # Your logic to extract accounts
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'extract-acc.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_facebook_followers():
-    print("Starting Auto Facebook Followers...")  # Your logic for auto-following
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'auto-follow.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_comments():
-    print("Starting Auto Comments...")  # Your logic for auto-commenting
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'auto_comment.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_reply_to_comments():
-    print("Starting Auto Reply to Comments...")  # Your logic for auto-replying
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'atrc.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_reacts():
-    print("Starting Auto Reacts...")  # Your logic for auto-reacting
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'auto-reacts.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_create_page():
-    print("Starting Auto Create Page...")  # Your logic for creating pages
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'atc_page.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_react_comment():
-    print("Starting Auto React Comment...")  # Your logic for auto-reacting on comments
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'auto-react-comment.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_working_vid():
-    print("Starting Auto Working Videos...")  # Your logic for auto-working videos
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'working-vid.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_reacts_reels():
-    print("Starting Auto Reacts for Reels...")  # Your logic for auto-reacting on reels
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'reels_reacts.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_join_groups():
-    print("Starting Auto Join Groups...")  # Your logic for auto-joining groups
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'join_group.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_comments_reels():
-    print("Starting Auto Comments for Reels...")  # Your logic for auto-commenting on reels
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'reels_comments.py'
+    clone_and_run(repo_url, script_name)
 
 def auto_comments_vids():
-    print("Starting Auto Comments for Videos...")  # Your logic for auto-commenting on videos
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'video_comments.py'
+    clone_and_run(repo_url, script_name)
 
 def spam_share():
-    print("Starting Spam Shares...")  # Your logic for spam shares
-
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'spam_share.py'
+    clone_and_run(repo_url, script_name)
+    
 def bundle_reacts():
-    print("Starting Bundle Reactions...")  # Your logic for bundle reactions
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'bundle_reacts.py'
+    clone_and_run(repo_url, script_name)
 
 def easy_comments():
-    print("Starting Easy Comments...")  # Your logic for easy comments
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'easy_comments.py'
+    clone_and_run(repo_url, script_name)
 
-def auto_remove_dead_accounts():
-    print("Starting Auto Remove Dead Accounts...")  # Your logic to remove dead accounts
-
-def remove_duplicate_accounts():
-    print("Starting Remove Duplicate Accounts...")  # Your logic to remove duplicate accounts
+def acc_checker():
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'acc_checker.py'
+    clone_and_run(repo_url, script_name)
+    
+def dupli_remover():
+    repo_url = 'https://github.com/KYZER02435/BOOSTING'
+    script_name = 'dupli_remover.py'
+    clone_and_run(repo_url, script_name)
 
 def reset():
     folder_path = '/sdcard/Test'
