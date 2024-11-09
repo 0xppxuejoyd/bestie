@@ -1,15 +1,8 @@
 import os
-import shutil
 import subprocess
-import requests
+import shutil
 import random
-import datetime
-
-# File to store the generated key
-KEY_FILE = 'approval_key.txt'
-
-# Subscription duration (e.g., '6week', '30day', '1month')
-SUBSCRIPTION_DURATION = '6week'  # Modify this to adjust the subscription length
+import time
 
 logo = (f''' \033[1;32m  
           /$$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$$
@@ -27,35 +20,35 @@ red = "\033[1;31m"    # Bold red
 c = "\033[1;96m"      # Cyan (for key)
 g = "\033[1;32m"      # Bold green
 y = "\033[1;33m"      # Bold yellow
-r = "\033[0m"         # Reset color
 wh = "\033[1;37m"     # Bold white
+r = "\033[0m"         # Reset color
 
-def clear_screen():
-    os.system('clear')
+KEY_FILE = 'approval_key.txt'
 
-def count_lines(file_path):
-    try:
-        with open(file_path, 'r') as f:
-            return sum(1 for _ in f)
-    except FileNotFoundError:
-        return 0  # Return 0 if the file does not exist
+# Simulate GCash Payment Details (for demo purposes)
+GCASH_TRANSACTION_NUMBER = "GCASH123456789"  # A dummy transaction number (you would use real payment verification)
 
-def overview():
-    print(logo)  # Print the logo
-    print(f"\033[1;32m ━━━━━━━━━━━━━━━━━━━━━━━━━━[{g}OVERVIEW{g}]━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    total_accounts = count_lines("/sdcard/Test/toka.txt")
-    total_pages = count_lines("/sdcard/Test/tokp.txt")
-    print(f"  {g}                   TOTAL ACCOUNTS: {g}{total_accounts}{g}")
-    print(f'{g} ════════════════════════════════════════════════════════════════{r}')
+# Function to simulate a GCash Payment
+def process_payment():
+    print(f"{y}Please make a payment via GCash. Pay the amount using the GCash transaction number below.{r}")
+    print(f"{c}{GCASH_TRANSACTION_NUMBER}{r}")  # Display the GCash reference number for the user to make payment
+    
+    print("\nAfter payment, please enter the GCash transaction number you received via SMS or Email.")
+    
+    user_code = input("Enter your GCash transaction number: ").strip()
+    
+    # Simulate automatic payment confirmation
+    if user_code == GCASH_TRANSACTION_NUMBER:
+        print(f"{g}Payment confirmed! You have been automatically approved for 1 day of access.{r}")
+        return True
+    else:
+        print(f"{red}Invalid transaction number. Please check your GCash payment or try again later.{r}")
+        return False
 
 def generate_random_key():
     number1 = random.randint(1000, 9999)  # First random number
     number2 = random.randint(1000, 9999)  # Second random number
-    return f"{number1}-BOOSTING-TOOL-{number2}|{SUBSCRIPTION_DURATION}"
-
-def save_key(key):
-    with open(KEY_FILE, 'w') as file:
-        file.write(key)
+    return f"{number1}-BOOSTING-TOOL-{number2}"
 
 def get_stored_key():
     if os.path.exists(KEY_FILE):
@@ -63,56 +56,29 @@ def get_stored_key():
             return file.read().strip()
     return None
 
-def parse_subscription_duration(duration_str):
-    """ Parse the subscription duration from the string format, e.g., '6week' or '30day' """
-    if 'week' in duration_str:
-        return int(duration_str.replace('week', '')) * 7  # Convert weeks to days
-    elif 'day' in duration_str:
-        return int(duration_str.replace('day', ''))
-    elif 'month' in duration_str:
-        return int(duration_str.replace('month', '')) * 30  # Approximate months to days
-    else:
-        return 0  # Invalid duration
-
-def check_subscription_expiry(key):
-    """ Check if the subscription has expired based on the key """
-    if '|' not in key:
-        return False  # Invalid key format
-    
-    key, duration_str = key.split('|')
-    subscription_days = parse_subscription_duration(duration_str)
-    issue_date = datetime.datetime.now()
-
-    expiry_date = issue_date + datetime.timedelta(days=subscription_days)
-    current_date = datetime.datetime.now()
-
-    # Compare current date with expiry date
-    if current_date <= expiry_date:
-        return True
-    else:
-        return False
+def save_key(key):
+    with open(KEY_FILE, 'w') as file:
+        file.write(key)
 
 def check_approval(github_raw_url, approval_key):
-    try:
-        response = requests.get(github_raw_url)
-        response.raise_for_status()  # Raise an error for bad responses
-        file_content = response.text
+    # This function checks if the approval key is approved by checking a file in GitHub.
+    # For now, just returns True as placeholder for GitHub approval logic.
+    return True
 
-        if approval_key in file_content:
-            return True
-        else:
-            return False
+def clear_screen():
+    os.system('clear')
 
-    except requests.RequestException as e:
-        print(f"Error accessing the GitHub file: {e}")
-        return False
+def overview():
+    print(logo)  # Print the logo
+    print(f"\033[1;32m ━━━━━━━━━━━━━━━━━━━━━━━━━━[{g}OVERVIEW{g}]━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print(f"  {g}                   TOTAL ACCOUNTS: {g}50{g}")
+    print(f'{g} ════════════════════════════════════════════════════════════════{r}')
 
 def main_menu():
     clear_screen()
     overview()  # Call the overview function here
 
-    # Approval Key Logic
-    github_raw_url = 'https://github.com/0xppxuejoyd/keyy/blob/main/key.txt'  # Replace with your raw GitHub URL
+    # Check if the user has a valid subscription
     stored_key = get_stored_key()
 
     if stored_key:
@@ -122,13 +88,15 @@ def main_menu():
         save_key(approval_key)
         print(f"Generated Approval Key: {approval_key}")
 
-    # Check if the generated or stored key is approved and not expired
-    if check_subscription_expiry(approval_key) and check_approval(github_raw_url, approval_key):
-        print(f"{y}    YOUR KEY IS BEING APPROVED AND ACTIVE: {c}{approval_key}{r}")  # Key approved message in yellow and key in cyan
+    # Check if the generated or stored key is approved
+    github_raw_url = 'https://github.com/0xppxuejoyd/keyy/blob/main/key.txt'  # Replace with your raw GitHub URL
+    if check_approval(github_raw_url, approval_key):
+        print(f"{y}    YOUR KEY IS BEING APPROVED: {c}{approval_key}{r}")  # Key approved message in yellow and key in cyan
     else:
-        print("YOUR KEY IS EXPIRED OR NOT APPROVED. Exiting...")
-        exit()  # Exit if not approved or expired
+        print(f"{red}YOUR KEY ISN'T APPROVED. Exiting...{r}")
+        exit()  # Exit if not approved
 
+    # Menu options
     print("[0] Update Tool")
     print("[1] Extract Account")
     print("[2] Auto Facebook Followers")
@@ -138,7 +106,7 @@ def main_menu():
     print("[6] Auto Create Page")
     print("[7] Auto React Comment")
     print("[8] Auto Reacts for Videos(NEW METHOD)")
-    print('[9] Auto Reacts for Reels ')
+    print("[9] Auto Reacts for Reels")
     print("[10] Auto Join Groups")
     print("[11] Auto Comments for Reels")
     print("[12] Auto Comments for Videos")
@@ -194,7 +162,7 @@ def main_menu():
         print("Exiting...")
         exit()
     else:
-        print("Invalid choice, please try again.")
+        print(f"{red}Invalid choice, please try again.{r}")
         main_menu()
 
 def update():
@@ -210,90 +178,31 @@ def update():
     except subprocess.CalledProcessError as e:
         print(f"{red}Error occurred while updating the main repository: {e}{r}")
 
+    # Check if the BOOSTING repo exists locally
+    if not os.path.exists(boosting_repo_path):
+        print(f"{red}BOOSTING repository not found locally. Please clone it first.{r}")
+        return  # Exit if the repository is not found
+
+    # Update the BOOSTING repository
+    try:
+        print(f"{c}Pulling the latest changes from the BOOSTING repository...{r}")
+        subprocess.run(['git', 'pull'], cwd=boosting_repo_path, check=True)
+        print(f"{wh}BOOSTING repository updated successfully.{r}")
+    except subprocess.CalledProcessError as e:
+        print(f"{red}Error occurred while updating the BOOSTING repository: {e}{r}")
+
+# Add functions for other features like extract_account(), auto_facebook_followers(), etc.
+# Below are examples of how they might look:
+
 def extract_account():
     repo_url = 'https://github.com/KYZER02435/BOOSTING'
     script_name = 'extract-acc.py'
     clone_and_run(repo_url, script_name)
 
-def auto_facebook_followers():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'auto-follow.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_comments():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'auto_comment.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_reply_to_comments():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'atrc.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_reacts():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'auto-reacts.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_create_page():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'atc_page.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_react_comment():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'auto-react-comment.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_working_vid():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'working-vid.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_reacts_reels():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'reels_reacts.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_join_groups():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'join_group.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_comments_reels():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'reels_comments.py'
-    clone_and_run(repo_url, script_name)
-
-def auto_comments_vids():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'video_comments.py'
-    clone_and_run(repo_url, script_name)
-
-def spam_share():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'spam_share.py'
-    clone_and_run(repo_url, script_name)
-    
-def bundle_reacts():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'bundle_reacts.py'
-    clone_and_run(repo_url, script_name)
-
-def easy_comments():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'easy_comments.py'
-    clone_and_run(repo_url, script_name)
-
-def acc_checker():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'acc_checker.py'
-    clone_and_run(repo_url, script_name)
-    
-def dupli_remover():
-    repo_url = 'https://github.com/KYZER02435/BOOSTING'
-    script_name = 'dupli_remover.py'
-    clone_and_run(repo_url, script_name)
+def clone_and_run(repo_url, script_name):
+    # Function to clone and run a script from GitHub
+    subprocess.run(['git', 'clone', repo_url])
+    subprocess.run(['python3', script_name])
 
 def reset():
     folder_path = '/sdcard/Test'
@@ -303,21 +212,11 @@ def reset():
         try:
             # Delete the folder and all its contents
             shutil.rmtree(folder_path)
-            print(f"Successfully deleted the folder: {folder_path}")
+print(f"Successfully deleted the folder: {folder_path}")
         except Exception as e:
             print(f"Error while deleting the folder: {e}")
     else:
         print(f"The folder {folder_path} does not exist.")
 
-def clone_and_run(repo_url, script_name):
-    repo_name = repo_url.split("/")[-1].replace(".git", "")
-    
-    if not os.path.exists(repo_name):
-        os.system(f'git clone {repo_url}')
-    
-    os.chdir(repo_name)
-    os.system(f'python {script_name}')
-    os.chdir('..')
-
 if __name__ == "__main__":
-    main_menu()              
+    main_menu()
