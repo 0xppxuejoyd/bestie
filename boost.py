@@ -212,7 +212,7 @@ def reset():
         try:
             # Delete the folder and all its contents
             shutil.rmtree(folder_path)
-print(f"Successfully deleted the folder: {folder_path}")
+            print(f"Successfully deleted the folder: {folder_path}")  # This should be inside the try block
         except Exception as e:
             print(f"Error while deleting the folder: {e}")
     else:
