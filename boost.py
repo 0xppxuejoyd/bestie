@@ -1,14 +1,13 @@
 import os
-import time
-import random
 import shutil
 import subprocess  # To run git pull command
 import requests
+import random
+import time
+from datetime import datetime, timedelta
 
-# Constants and configuration
-KEY_FILE = 'approval_key.txt'  # Store the approval key
-SUBSCRIPTION_FILE = 'subscriptions.txt'  # Store subscription data
-valid_gcash_numbers = ['09123456789', '09234567890']  # Example valid GCash numbers for simplicity
+# File to store the generated key and timestamp
+KEY_FILE = 'approval_key.txt'
 
 logo = (f''' \033[1;32m  
           /$$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$$
@@ -17,10 +16,24 @@ logo = (f''' \033[1;32m
          | $$$$$$$ | $$  | $$| $$  | $$|  $$$$$$    | $$   
          | $$__  $$| $$  | $$| $$  | $$ \\____  $$   | $$   
          | $$  \\ $$| $$  | $$| $$  | $$ /$$  \\ $$   | $$   
-         | $$$$$$$/|  $$$$$$/|  $$$$$$/| $$$$$$/   | $$   
+         | $$$$$$$/|  $$$$$$/|  $$$$$$/|  $$$$$$/   | $$   
          |_______/  \\______/  \\______/  \\______/    |__/   
                                                   
 ''')
+
+# Colors for terminal output
+red = "\033[1;31m"    # Bold red
+c = "\033[1;96m"      # Cyan (for key)
+g = "\033[1;32m"      # Bold green
+y = "\033[1;33m"      # Bold yellow
+r = "\033[0m"         # Reset color
+wh = "\033[1;37m"     # Bold white
+
+# Time constants
+KEY_EXPIRATION_DAYS = 42  # Key expires after 42 days (6 weeks)
+
+# New GitHub URL for Subscription Status
+SUBSCRIPTION_GITHUB_RAW_URL = 'https://raw.githubusercontent.com/YourGitHubUser/subscription/main/status.txt'
 
 def clear_screen():
     os.system('clear')
@@ -32,99 +45,109 @@ def count_lines(file_path):
     except FileNotFoundError:
         return 0  # Return 0 if the file does not exist
 
+def overview():
+    print(logo)  # Print the logo
+    print(f"\033[1;32m ━━━━━━━━━━━━━━━━━━━━━━━━━━[{g}OVERVIEW{g}]━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    total_accounts = count_lines("/sdcard/Test/toka.txt")
+    total_pages = count_lines("/sdcard/Test/tokp.txt")
+    print(f"  {g}                   TOTAL ACCOUNTS: {g}{total_accounts}{g}")
+    print(f'{g} ════════════════════════════════════════════════════════════════{r}')
+
+def git_pull_repository():
+    repo_path = '.'  # Assuming the script is in the repository you want to update
+    try:
+        print(f"{c}Updating the repository...{r}")
+        subprocess.run(['git', 'pull'], cwd=repo_path, check=True)
+        print(f"{wh}Repository updated successfully.{r}")
+    except subprocess.CalledProcessError as e:
+        print(f"{red}Error occurred while updating the repository: {e}{r}")
+
+def clone_and_run(repo_url, script_name):
+    repo_name = repo_url.split("/")[-1].replace(".git", "")
+    
+    if not os.path.exists(repo_name):
+        os.system(f'git clone {repo_url}')
+    
+    os.chdir(repo_name)
+    os.system(f'python {script_name}')
+    os.chdir('..')
+
 def generate_random_key():
     number1 = random.randint(1000, 9999)  # First random number
     number2 = random.randint(1000, 9999)  # Second random number
-    return f"{number1}-BOOSTING-TOOL-{number2}"
+    key = f"{number1}-BOOSTING-TOOL-{number2}"
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return key, timestamp
 
-def get_stored_key():
+def get_key_and_timestamp():
     if os.path.exists(KEY_FILE):
         with open(KEY_FILE, 'r') as file:
-            return file.read().strip()
-    return None
+            content = file.read().strip()
+            if content:
+                key, timestamp = content.split('|')
+                return key, timestamp
+    return None, None
 
-def save_key(key):
+def save_key_and_timestamp(key, timestamp):
     with open(KEY_FILE, 'w') as file:
-        file.write(key)
+        file.write(f"{key}|{timestamp}")
 
-def check_approval(approval_key):
-    # Replace with actual key validation logic
-    if approval_key == "valid-key":
+def check_key_expiration(timestamp):
+    # Convert timestamp to a datetime object
+    key_date = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+    expiration_date = key_date + timedelta(days=KEY_EXPIRATION_DAYS)
+
+    if datetime.now() > expiration_date:
         return True
     return False
 
-def handle_subscription(gcash_number, amount_paid):
-    """
-    Handles subscription based on GCash number and payment.
-    """
-    expiration_time = None
-    if gcash_number in valid_gcash_numbers:
-        if amount_paid == 5:  # 5 pesos gives 1 day
-            expiration_time = time.time() + 86400  # 1 day in seconds
-        elif amount_paid == 20:  # 20 pesos gives 6 weeks
-            expiration_time = time.time() + 6 * 7 * 86400  # 6 weeks in seconds
-        else:
-            print("Invalid amount for subscription.")
-    else:
-        print("Invalid GCash number.")
-    
-    return expiration_time
-
-def check_subscription(gcash_number):
-    """
-    Check if the GCash number has a valid subscription.
-    """
+def check_subscription(github_raw_url, approval_key):
     try:
-        with open(SUBSCRIPTION_FILE, 'r') as file:
-            subscriptions = file.readlines()
-        for line in subscriptions:
-            number, expiration = line.strip().split(',')
-            if number == gcash_number:
-                expiration_time = float(expiration)
-                if expiration_time > time.time():
-                    return True
-                else:
-                    print(f"Subscription for {gcash_number} has expired.")
-                    return False
-    except FileNotFoundError:
+        # Fetch the subscription status from the raw GitHub URL
+        response = requests.get(github_raw_url)
+        response.raise_for_status()  # Raise an error for bad responses
+        file_content = response.text
+        
+        # Check if the approval key exists in the content (this checks for the valid key)
+        if approval_key in file_content:
+            # If key is valid, check if the subscription is active
+            if "subscribed" in file_content:
+                return True
+            else:
+                print(f"{red}Your subscription is inactive! Please renew your subscription.{r}")
+                return False
+        else:
+            return False
+
+    except requests.RequestException as e:
+        print(f"Error accessing the GitHub file: {e}")
         return False
-    return False
 
 def main_menu():
     clear_screen()
-    print(logo)
-    
-    print("Checking approval...")
-    stored_key = get_stored_key()
+    overview()  # Call the overview function here
+
+    # Approval Key Logic
+    stored_key, timestamp = get_key_and_timestamp()
+
     if stored_key:
-        approval_key = stored_key
+        # Check if the key has expired
+        if check_key_expiration(timestamp):
+            print(f"{red}Your key has expired! Please obtain a new key.{r}")
+            exit()  # Exit if the key has expired
     else:
-        approval_key = generate_random_key()
-        save_key(approval_key)
-        print(f"Generated Approval Key: {approval_key}")
+        stored_key, timestamp = generate_random_key()
+        save_key_and_timestamp(stored_key, timestamp)
+        print(f"Generated Approval Key: {stored_key}")
 
-    if check_approval(approval_key):
-        print(f"Your key is approved: {approval_key}")
+    # Check if the generated or stored key is approved and the subscription is active
+    if check_subscription(SUBSCRIPTION_GITHUB_RAW_URL, stored_key):
+        print(f"{y}    YOUR KEY IS APPROVED AND SUBSCRIBED: {c}{stored_key}{r}")  # Key and subscription approved
     else:
-        print("Your key is not approved. Exiting...")
-        exit()
+        print(f"{red}YOUR KEY ISN'T APPROVED OR YOUR SUBSCRIPTION IS INACTIVE, EXITING...{r}")
+        exit()  # Exit if not approved or subscription inactive
 
-    print("[Enter] GCash Payment")
-    gcash_number = input("Enter GCash number: ").strip()
-    amount_paid = int(input("Enter the amount paid (5, 20): ").strip())
-
-    # Handle subscription logic
-    expiration_time = handle_subscription(gcash_number, amount_paid)
-    if expiration_time:
-        with open(SUBSCRIPTION_FILE, 'a') as file:
-            file.write(f"{gcash_number},{expiration_time}\n")
-        print(f"Payment successful! Subscription valid until {time.ctime(expiration_time)}")
-
-    # Now check if the user has a valid subscription
-    if not check_subscription(gcash_number):
-        print("No valid subscription found. Exiting...")
-        return  # Exit if the user doesn't have a valid subscription
-
+    # Display the tool options to the user
     print("[0] Update Tool")
     print("[1] Extract Account")
     print("[2] Auto Facebook Followers")
@@ -133,25 +156,25 @@ def main_menu():
     print("[5] Auto Reacts")
     print("[6] Auto Create Page")
     print("[7] Auto React Comment")
-    print("[8] Auto Working Video")
-    print("[9] Auto Reacts Reels")
+    print("[8] Auto Reacts for Videos(NEW METHOD)")
+    print('[9] Auto Reacts for Reels ')
     print("[10] Auto Join Groups")
-    print("[11] Auto Comments Reels")
-    print("[12] Auto Comments Vids")
-    print("[13] Spam Share")
-    print("[14] Bundle Reacts")
-    print("[15] Easy Comments")
-    print("[16] Acc Checker")
-    print("[17] Duplicates Remover")
-    print("[18] Reset")
+    print("[11] Auto Comments for Reels")
+    print("[12] Auto Comments for Videos")
+    print("[13] Spam Shares")
+    print("[14] Bundle Reactions")
+    print("[15] Auto Comment For Post(EASY WAY FOR DIFFERENT COMMENTS)")
+    print("[C] AUTO REMOVE DEAD ACCOUNTS")
+    print("[RDP] REMOVE DUPLICATE ACCOUNTS")
+    print("[R] Reset")
     print("[E] Exit")
 
-    choice = input("Enter your choice: ").strip()
+    choice = input("Enter your choice: ").strip().upper()
 
     if choice == '0':
-        update()  # Update the tool
+        update()  # Call the update function
     elif choice == '1':
-        extract_account()  # Extract account
+        extract_account()
     elif choice == '2':
         auto_facebook_followers()
     elif choice == '3':
@@ -180,18 +203,48 @@ def main_menu():
         bundle_reacts()
     elif choice == '15':
         easy_comments()
-    elif choice == '16':
+    elif choice == 'C':
         acc_checker()
-    elif choice == '17':
+    elif choice == 'RDP':
         dupli_remover()
-    elif choice == '18':
-        reset()  # Reset the folder
-    elif choice.upper() == 'E':
+    elif choice == 'R':
+        reset()
+    elif choice == 'E':
         print("Exiting...")
         exit()
     else:
         print("Invalid choice, please try again.")
         main_menu()
+
+def update():
+    # Paths to the local repositories
+    main_repo_path = '.'  # Assuming the script is in the main repo directory
+    boosting_repo_path = './BOOSTING'  # Path to the local BOOSTING repository
+
+    # Update the main repository
+    try:
+        print(f"{c}Updating the main repository...{r}")
+        subprocess.run(['git', 'pull'], cwd
+        # Update the main repository
+    try:
+        print(f"{c}Updating the main repository...{r}")
+        subprocess.run(['git', 'pull'], cwd=main_repo_path, check=True)
+        print(f"{wh}Main repository updated successfully.{r}")
+    except subprocess.CalledProcessError as e:
+        print(f"{red}Error occurred while updating the main repository: {e}{r}")
+
+    # Check if the BOOSTING repo exists locally
+    if not os.path.exists(boosting_repo_path):
+        print(f"{red}BOOSTING repository not found locally. Please clone it first.{r}")
+        return  # Exit if the repository is not found
+
+    # Update the BOOSTING repository
+    try:
+        print(f"{c}Pulling the latest changes from the BOOSTING repository...{r}")
+        subprocess.run(['git', 'pull'], cwd=boosting_repo_path, check=True)
+        print(f"{wh}BOOSTING repository updated successfully.{r}")
+    except subprocess.CalledProcessError as e:
+        print(f"{red}Error occurred while updating the BOOSTING repository: {e}{r}")
 
 # Add functions for other features like extract_account(), auto_facebook_followers(), etc.
 # Below are examples of how they might look:
@@ -295,57 +348,5 @@ def reset():
     else:
         print(f"The folder {folder_path} does not exist.")
 
-# Function to clone the repository and run the script
-def clone_and_run(repo_url, script_name):
-    # Clone the repository
-    if not os.path.exists('BOOSTING'):
-        print("Cloning BOOSTING repository...")
-        subprocess.run(['git', 'clone', repo_url])
-
-    # Run the specific script from the repository
-    script_path = os.path.join('BOOSTING', script_name)
-    if os.path.exists(script_path):
-        print(f"Running {script_name}...")
-        subprocess.run(['python', script_path])
-    else:
-        print(f"Script {script_name} not found!")
-
-# Update function to handle repository pulls
-def update():
-    # Paths to the local repositories
-    main_repo_path = '.'  # Assuming the script is in the main repo directory
-    boosting_repo_path = './BOOSTING'  # Path to the local BOOSTING repository
-
-    # Update the main repository
-    try:
-        print("Updating the main repository...")
-        subprocess.run(['git', 'pull'], cwd=main_repo_path, check=True)
-        print("Main repository updated successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred while updating the main repository: {e}")
-
-    # Check if the BOOSTING repo exists locally
-    if not os.path.exists(boosting_repo_path):
-        print("BOOSTING repository not found locally. Please clone it first.")
-        return  # Exit if the repository is not found
-
-    # Update the BOOSTING repository
-    try:
-        print("Pulling the latest changes from the BOOSTING repository...")
-        subprocess.run(['git', 'pull'], cwd=boosting_repo_path, check=True)
-        print("BOOSTING repository updated successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred while updating the BOOSTING repository: {e}")
-
-# Function to check key validity from file
-def check_key_validity():
-    stored_key = get_stored_key()
-    if stored_key and check_approval(stored_key):
-        print(f"Your key is approved: {stored_key}")
-    else:
-        print("Your key is not approved. Exiting...")
-        exit()
-
-# Main function to control the flow
 if __name__ == "__main__":
-    main_menu()
+    main_menu()      
