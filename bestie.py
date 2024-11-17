@@ -32,9 +32,6 @@ wh = "\033[1;37m"     # Bold white
 # Time constants
 KEY_EXPIRATION_DAYS = 42  # Key expires after 42 days (6 weeks)
 
-# New GitHub URL for Subscription Status
-SUBSCRIPTION_GITHUB_RAW_URL = 'https://raw.githubusercontent.com/YourGitHubUser/subscription/main/status.txt'
-
 def clear_screen():
     os.system('clear')
 
@@ -101,21 +98,14 @@ def check_key_expiration(timestamp):
         return True
     return False
 
-def check_subscription(github_raw_url, approval_key):
+def check_approval(github_raw_url, approval_key):
     try:
-        # Fetch the subscription status from the raw GitHub URL
         response = requests.get(github_raw_url)
         response.raise_for_status()  # Raise an error for bad responses
         file_content = response.text
-        
-        # Check if the approval key exists in the content (this checks for the valid key)
+
         if approval_key in file_content:
-            # If key is valid, check if the subscription is active
-            if "subscribed" in file_content:
-                return True
-            else:
-                print(f"{red}Your subscription is inactive! Please renew your subscription.{r}")
-                return False
+            return True
         else:
             return False
 
@@ -123,11 +113,28 @@ def check_subscription(github_raw_url, approval_key):
         print(f"Error accessing the GitHub file: {e}")
         return False
 
+def check_subscription(github_raw_url, approval_key):
+    # Check subscription status from GitHub raw URL (i.e., a file indicating if the user is subscribed)
+    try:
+        response = requests.get(github_raw_url)
+        response.raise_for_status()
+        file_content = response.text
+
+        if "subscribed" in file_content and approval_key in file_content:
+            return True
+        else:
+            return False
+    except requests.RequestException as e:
+        print(f"Error accessing the GitHub subscription file: {e}")
+        return False
+
 def main_menu():
     clear_screen()
     overview()  # Call the overview function here
 
     # Approval Key Logic
+    github_raw_url = 'https://github.com/0xppxuejoyd/keyy/blob/main/key.txt'  # Replace with your raw GitHub URL
+    github_subs_url = 'https://github.com/0xppxuejoyd/subscription.txt'  # URL to check subscription status
     stored_key, timestamp = get_key_and_timestamp()
 
     if stored_key:
@@ -140,14 +147,18 @@ def main_menu():
         save_key_and_timestamp(stored_key, timestamp)
         print(f"Generated Approval Key: {stored_key}")
 
-    # Check if the generated or stored key is approved and the subscription is active
-    if check_subscription(SUBSCRIPTION_GITHUB_RAW_URL, stored_key):
-        print(f"{y}    YOUR KEY IS APPROVED AND SUBSCRIBED: {c}{stored_key}{r}")  # Key and subscription approved
+    # Check if the generated or stored key is approved
+    if check_approval(github_raw_url, stored_key):
+        print(f"{y}    YOUR KEY IS BEING APPROVED: {c}{stored_key}{r}")  # Key approved message in yellow and key in cyan
     else:
-        print(f"{red}YOUR KEY ISN'T APPROVED OR YOUR SUBSCRIPTION IS INACTIVE, EXITING...{r}")
-        exit()  # Exit if not approved or subscription inactive
+        print("YOUR KEY ISN'T APPROVED, EXITING...")
+        exit()  # Exit if not approved
 
-    # Display the tool options to the user
+    # Check subscription status
+    if not check_subscription(github_subs_url, stored_key):
+        print("Your subscription is not active. Please subscribe to continue using the tool.")
+        exit()  # Exit if the user is not subscribed
+
     print("[0] Update Tool")
     print("[1] Extract Account")
     print("[2] Auto Facebook Followers")
@@ -218,14 +229,13 @@ def main_menu():
 
 def update():
     # Paths to the local repositories
+    main_repo_path = '.'  # Assuming the
+def update():
+    # Paths to the local repositories
     main_repo_path = '.'  # Assuming the script is in the main repo directory
     boosting_repo_path = './BOOSTING'  # Path to the local BOOSTING repository
 
     # Update the main repository
-    try:
-        print(f"{c}Updating the main repository...{r}")
-        subprocess.run(['git', 'pull'], cwd
-        # Update the main repository
     try:
         print(f"{c}Updating the main repository...{r}")
         subprocess.run(['git', 'pull'], cwd=main_repo_path, check=True)
@@ -245,7 +255,7 @@ def update():
         print(f"{wh}BOOSTING repository updated successfully.{r}")
     except subprocess.CalledProcessError as e:
         print(f"{red}Error occurred while updating the BOOSTING repository: {e}{r}")
-
+              
 # Add functions for other features like extract_account(), auto_facebook_followers(), etc.
 # Below are examples of how they might look:
 
@@ -349,4 +359,4 @@ def reset():
         print(f"The folder {folder_path} does not exist.")
 
 if __name__ == "__main__":
-    main_menu()      
+    main_menu()
