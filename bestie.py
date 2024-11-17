@@ -134,7 +134,7 @@ def main_menu():
 
     # Approval Key Logic
     github_raw_url = 'https://github.com/0xppxuejoyd/keyy/blob/main/key.txt'  # Replace with your raw GitHub URL
-    github_subs_url = 'https://github.com/0xppxuejoyd/subscription.txt'  # URL to check subscription status
+    github_subs_url = 'https://github.com/0xppxuejoyd/subscription/blob/main/subscription.txt'  # URL to check subscription status
     stored_key, timestamp = get_key_and_timestamp()
 
     if stored_key:
